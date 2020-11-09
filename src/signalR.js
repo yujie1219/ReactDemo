@@ -52,34 +52,47 @@ class RemoteDataViewer extends React.Component {
         connection.on('Temperature', (data) => {
             console.log(data);
             const messageArray = JSON.parse(data.message);
-            const deviceId = message.deviceId;
-            let currentDeviceData = [];
-            if (remoteData.has(deviceId)) {
-                currentDeviceData = remoteData.get(deviceId);
-            }
             messageArray.map(message => {
+                const deviceId = message.deviceId;
+                let currentDeviceData = [];
+                if (remoteData.has(deviceId)) {
+                    currentDeviceData = remoteData.get(deviceId);
+                }
                 currentDeviceData.push(message);
+                remoteData.set(deviceId, currentDeviceData);
                 return message;
             });
-            remoteData.set(deviceId, currentDeviceData);
 
             this.setState({
-                remoteData: remoteData.slice()
+                remoteData: new Map(remoteData)
             })
         });
     }
 
     getOption() {
-        const temperatures = [];
-        const time = [];
-        this.state.remoteData.map(message => {
-            temperatures.push(message.temperature);
-            const createDate = message.createTime.date;
-            const createTime = message.createTime.time;
-            const currenttime = createTime.hour + ':' + createTime.minute + ':' + createTime.second;
-            time.push(currenttime);
-            return message;
-        })
+        const legends = Array.from(this.state.remoteData.keys());
+        const series = [];
+        const xAxis = [];
+        let isFirst = true;
+        Array.from(this.state.remoteData.keys()).map((key, index) => {
+            const deviceDatas = this.state.remoteData.get(key);
+            const temperatures = [];
+            deviceDatas.map(deviceData => {
+                const createTime = deviceData.createTime.time;
+                if (isFirst)
+                    xAxis.push(createTime.hour + ':' + createTime.minute + ':' + createTime.second);
+                temperatures.push(deviceData.temperature);
+                return deviceData;
+            })
+            isFirst = false;
+            series.push({
+                name: key,
+                type: 'line',
+                data: temperatures
+            });
+            return (key, index);
+        });
+
 
         return {
             title: {
@@ -87,17 +100,13 @@ class RemoteDataViewer extends React.Component {
             },
             tooltip: {},
             legend: {
-                data: ['温度']
+                data: legends
             },
             xAxis: {
-                data: time
+                data: xAxis
             },
             yAxis: {},
-            series: [{
-                name: '温度',
-                type: 'line',
-                data: temperatures
-            }]
+            series: series
         }
     }
 
