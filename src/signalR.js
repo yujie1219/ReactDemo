@@ -6,7 +6,7 @@ const connection = new signalR.HubConnectionBuilder()
     .withUrl('http://10.190.177.161:7071/api')
     .configureLogging(signalR.LogLevel.Information)
     .build();
-let remoteData = [];
+let remoteData = new Map();
 
 async function start() {
     try {
@@ -52,10 +52,17 @@ class RemoteDataViewer extends React.Component {
         connection.on('Temperature', (data) => {
             console.log(data);
             const messageArray = JSON.parse(data.message);
+            const deviceId = message.deviceId;
+            let currentDeviceData = [];
+            if (remoteData.has(deviceId)) {
+                currentDeviceData = remoteData.get(deviceId);
+            }
             messageArray.map(message => {
-                remoteData.push(message);
+                currentDeviceData.push(message);
                 return message;
             });
+            remoteData.set(deviceId, currentDeviceData);
+
             this.setState({
                 remoteData: remoteData.slice()
             })
