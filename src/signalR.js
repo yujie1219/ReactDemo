@@ -1,10 +1,12 @@
 import React from 'react';
 import * as signalR from '@microsoft/signalr';
+import ReactEcharts from 'echarts-for-react';
 
 const connection = new signalR.HubConnectionBuilder()
-    .withUrl('')
+    .withUrl('http://10.190.177.161:7071/api')
     .configureLogging(signalR.LogLevel.Information)
     .build();
+let remoteData = [];
 
 async function start() {
     try {
@@ -26,23 +28,75 @@ async function stop() {
     }
 }
 
-let remoteData = [];
-
-class remoteDataViewer extends React.Component {
+class RemoteDataViewer extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            remoteData: []
+            remoteData: remoteData
         }
+        this.listenOnTemperature = this.listenOnTemperature.bind(this);
     }
 
     // 组件已经加载
     componentDidMount() {
         start();
+        this.listenOnTemperature();
     }
 
     // 组件即将结束加载
     componentWillUnmount() {
         stop();
     }
+
+    listenOnTemperature() {
+        connection.on('Temperature', (data) => {
+            console.log(data);
+            const messageArray = JSON.parse(data.message);
+            messageArray.map(message => {
+                remoteData.push(message);
+                return message;
+            });
+            this.setState({
+                remoteData: remoteData.slice()
+            })
+        });
+    }
+
+    getOption() {
+        const temperatures = [];
+        const time = [];
+        this.state.remoteData.map(message => {
+            temperatures.push(message.temperature);
+            const createDate = message.createTime.date;
+            const createTime = message.createTime.time;
+            const currenttime = createTime.hour + ':' + createTime.minute + ':' + createTime.second;
+            time.push(currenttime);
+            return message;
+        })
+
+        return {
+            title: {
+                text: '温度变化'
+            },
+            tooltip: {},
+            legend: {
+                data: ['温度']
+            },
+            xAxis: {
+                data: time
+            },
+            yAxis: {},
+            series: [{
+                name: '温度',
+                type: 'line',
+                data: temperatures
+            }]
+        }
+    }
+
+    render() {
+        return <ReactEcharts option={this.getOption()} />;
+    }
 }
+
+export default RemoteDataViewer;
