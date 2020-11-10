@@ -50,7 +50,7 @@ class RemoteDataViewer extends React.Component {
 
     listenOnTemperature() {
         connection.on('Temperature', (data) => {
-            console.log(data);
+            // console.log(data);
             const messageArray = JSON.parse(data.message);
             messageArray.map(message => {
                 const deviceId = message.deviceId;
@@ -72,22 +72,22 @@ class RemoteDataViewer extends React.Component {
     getOption() {
         const legends = Array.from(this.state.remoteData.keys());
         const series = [];
-        const xAxis = [];
-        let isFirst = true;
         Array.from(this.state.remoteData.keys()).map((key, index) => {
             const deviceDatas = this.state.remoteData.get(key);
             const temperatures = [];
             deviceDatas.map(deviceData => {
+                const createDate = deviceData.createTime.date;
                 const createTime = deviceData.createTime.time;
-                if (isFirst)
-                    xAxis.push(createTime.hour + ':' + createTime.minute + ':' + createTime.second);
-                temperatures.push(deviceData.temperature);
+                const formattedDate = new Date(createDate.year + '-' + createDate.month + '-' + createDate.day + ' ' + createTime.hour + ':' + createTime.minute + ':' + createTime.second);
+                temperatures.push([formattedDate.getTime(), deviceData.temperature]);
                 return deviceData;
             })
-            isFirst = false;
             series.push({
                 name: key,
                 type: 'line',
+                showSymbol: false,
+                smooth: true,
+                hoverAnimation: false,
                 data: temperatures
             });
             return (key, index);
@@ -96,16 +96,32 @@ class RemoteDataViewer extends React.Component {
 
         return {
             title: {
-                text: '温度变化'
+                text: '温度监控'
             },
-            tooltip: {},
+            tooltip: {
+                trigger: 'axis',
+                // formatter: function (params) {
+                //     params.map(param => {
+                //         console.log(param);
+                //     })
+                // }
+            },
             legend: {
                 data: legends
             },
             xAxis: {
-                data: xAxis
+                type: 'time',
+                splitLine: {
+                    show: false
+                }
             },
-            yAxis: {},
+            yAxis: {
+                type: 'value',
+                boundaryGap: [0, '100%'],
+                splitLine: {
+                    show: false
+                }
+            },
             series: series
         }
     }
